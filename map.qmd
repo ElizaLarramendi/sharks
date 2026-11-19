@@ -1,0 +1,39 @@
+---
+title: "Map"
+---
+
+```{r}
+#| message: false
+library(tidyverse)
+library(maps)
+```
+
+```{r}
+#| cache: true
+attacks <- read_csv("data/attacks_clean.csv") |>
+  mutate(
+    Country_lower = Country |> str_trim() |> str_to_lower(),
+    Fatal_clean = case_when(
+      Fatal == "Y" ~ "Fatal",
+      Fatal == "N" ~ "Non-fatal",
+      .default = "Unknown"
+    )
+  )
+write_rds(attacks, "data/attacks.rds")
+```
+
+```{r}
+attacks_by_country <- attacks |>
+  count(Country_lower, name = "attacks")
+
+world <- map_data("world") |>
+  mutate(region_lower = str_to_lower(region)) |>
+  left_join(attacks_by_country, by = c("region_lower" = "Country_lower")) |>
+  mutate(attacks = replace_na(attacks, 0L))
+
+ggplot(world, aes(x = long, y = lat, group = group, fill = attacks)) +
+  geom_polygon(color = "white", linewidth = 0.1) +
+  scale_fill_viridis_c(name = "Shark attacks") +
+  coord_quickmap() +
+  theme_void()
+```
